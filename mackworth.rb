@@ -4,7 +4,6 @@
 require 'csv'
 require 'set'
 require 'pathname'
-require 'spacebar_listener'
 
 include Java
 
@@ -12,6 +11,7 @@ import java.awt.Color
 import java.awt.RenderingHints
 import java.awt.Toolkit
 import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.awt.geom.Ellipse2D
 import javax.swing.JButton
 import javax.swing.JFrame
@@ -34,6 +34,38 @@ module SwingUtil
 
   def mm_to_pixels length_in_mm
     length_in_mm * @@pixels_per_mm
+  end
+
+end
+
+class KeyList 
+  include KeyListener
+
+  attr_reader :keytime
+
+  def initialize
+    @keytime = nil
+  end
+
+  def clear
+    @keytime = nil
+  end
+
+  def keyTyped e
+    # ignore all after the first input ...    
+    return if @keytime
+
+    keychar = e.get_key_char
+
+    if keychar == KeyEvent::VK_SPACE
+      @keytime = Time.new
+    end
+  end
+
+  def keyPressed e
+  end
+
+  def keyReleased e
   end
 
 end
@@ -78,8 +110,10 @@ class MackworthTestResultsFile
   end
 end
 
-class MackworthTestParameters
+class MackworthTestConstants
 
+  APP_NAME = "Mackworth"
+  
   SHORT_LINE_LENGTH  = [84,     84][$param_num] # mm
   LONG_LINE_FACTOR   = [1.15, 1.50][$param_num]
   LONG_LINE_LENGTH   = (SHORT_LINE_LENGTH * LONG_LINE_FACTOR).to_i
@@ -102,19 +136,23 @@ class MackworthTestParameters
   # % of iterations to show long lines:
   LONGITERS   = ITERATIONS_PER_TEST * 0.25
 
+  BACKGROUND_COLOR = Color.new 250, 250, 250
+
+  BACKGROUND_COLOR_FLASH = Color.new 250, 0, 0
+
 end
 
 
 class MainPanel < JPanel
   include SwingUtil
 
-  attr_accessor :renderer
+  attr_accessor :renderer, :background_color
   
   def initialize
     super()
 
     @renderer = nil
-    @background_color = Color.new 250, 250, 250
+    @background_color = MackworthTestConstants::BACKGROUND_COLOR
   end
 
   def paintComponent g
@@ -151,13 +189,13 @@ class LineDrawer
     g   = gdimary[0]
     dim = gdimary[1]
   
-    g.color = MackworthTestParameters::LINE_COLOR
+    g.color = MackworthTestConstants::LINE_COLOR
     
     len   = mm_to_pixels length_in_mm
     ctr_x = dim.width  / 2
     x     = ctr_x - len / 2
 
-    g.fill_rect x, y, len, MackworthTestParameters::LINE_THICKNESS
+    g.fill_rect x, y, len, MackworthTestConstants::LINE_THICKNESS
   end
 
   def draw_text g, dim, text
@@ -183,7 +221,7 @@ class LineRenderer < LineDrawer
 
   def initialize test
     @test = test
-    @dist_from_y = mm_to_pixels(MackworthTestParameters::DISTANCE_BETWEEN_LINES) / 2
+    @dist_from_y = mm_to_pixels(MackworthTestConstants::DISTANCE_BETWEEN_LINES) / 2
   end
 
   def random_length base_len
@@ -193,7 +231,7 @@ class LineRenderer < LineDrawer
   def render g, dim
     return unless @test.show_lines
 
-    g.color = MackworthTestParameters::LINE_COLOR
+    g.color = MackworthTestConstants::LINE_COLOR
     
     length_in_mm = @test.current_line_length_in_mm
     ctr_y        = dim.height / 2
@@ -223,8 +261,8 @@ class IntroRenderer < LineDrawer
 
     ctr_y = dim.height / 2
 
-    draw_centered_line [ g, dim ], (ctr_y * 1.2).to_i, MackworthTestParameters::SHORT_LINE_LENGTH
-    draw_centered_line [ g, dim ], (ctr_y * 1.4).to_i, MackworthTestParameters::LONG_LINE_LENGTH
+    draw_centered_line [ g, dim ], (ctr_y * 1.2).to_i, MackworthTestConstants::SHORT_LINE_LENGTH
+    draw_centered_line [ g, dim ], (ctr_y * 1.4).to_i, MackworthTestConstants::LONG_LINE_LENGTH
   end
 
 end
@@ -278,7 +316,7 @@ class MackworthTestRunner
   end
 
   def update_line_length is_long_len
-    @current_line_length_in_mm = is_long_len ? MackworthTestParameters::LONG_LINE_LENGTH : MackworthTestParameters::SHORT_LINE_LENGTH
+    @current_line_length_in_mm = is_long_len ? MackworthTestConstants::LONG_LINE_LENGTH : MackworthTestConstants::SHORT_LINE_LENGTH
   end
 
   def repaint
@@ -300,10 +338,10 @@ class MackworthTestRunner
 
     # $$$ looks like the JPanel intercepts the key event ...
     
-    MackworthTestParameters::FLICKER_ITERATIONS.times do
+    MackworthTestConstants::FLICKER_ITERATIONS.times do
       # puts "flickering: #{Time.new.to_f}"
       repaint
-      java.lang.Thread.sleep(MackworthTestParameters::FLICKER_DURATION)
+      java.lang.Thread.sleep(MackworthTestConstants::FLICKER_DURATION)
     end
 
     @show_lines = false
@@ -316,7 +354,7 @@ class MackworthTestRunner
 
     duration = endtime - starttime
     
-    sleep_duration = (MackworthTestParameters::DISPLAY_DURATION - duration).to_i
+    sleep_duration = (MackworthTestConstants::DISPLAY_DURATION - duration).to_i
 
     # puts "sleep_duration: #{sleep_duration}"
 
@@ -330,18 +368,27 @@ class MackworthTestRunner
     # get it here, so subsequent calls don't let one "leak" in
     keytime = @key_timer.keytime
     
-    # puts "keytime: #{keytime}"
-    if keytime
-      # puts "keytime: #{keytime.to_f}"
-    end
-
     answered = !keytime.nil?
 
     response_time = answered ? keytime.to_f - starttime.to_f : -1.0
 
     # puts "response_time: #{response_time}"
 
-    response = [ @user_id, response_time, answered, is_long, answered == is_long ]
+    is_correct = answered == is_long
+
+    if !is_correct
+      @mainpanel.background_color = MackworthTestConstants::BACKGROUND_COLOR_FLASH
+      repaint
+    end
+
+    java.lang.Thread.sleep 250
+    
+    if !is_correct
+      @mainpanel.background_color = MackworthTestConstants::BACKGROUND_COLOR
+      repaint      
+    end
+
+    response = [ @user_id, response_time, answered, is_long, is_correct ]
 
     puts "response: #{response.inspect}"
     
@@ -383,7 +430,7 @@ end
 class MackworthTest < MackworthTestRunner
 
   def initialize mainpanel
-    super(mainpanel, MackworthTestParameters::ITERATIONS_PER_TEST)
+    super(mainpanel, MackworthTestConstants::ITERATIONS_PER_TEST)
   end
 
   def write_responses
@@ -423,7 +470,7 @@ class MackworthTestIntro
     @mainpanel.renderer = IntroRenderer.new self
     @mainpanel.repaint
 
-    java.lang.Thread.sleep MackworthTestParameters::INTRO_DURATION
+    java.lang.Thread.sleep MackworthTestConstants::INTRO_DURATION
   end
 end
 
@@ -431,7 +478,7 @@ end
 class MackworthTestFrame < JFrame
 
   def initialize
-    super "Line Test"
+    super MackworthTestConstants::APP_NAME
 
     menubar = JMenuBar.new
 
@@ -509,7 +556,10 @@ class MackworthTestFrame < JFrame
     item_about.tool_tip_text = "Show information about the program"    
 
     item_about.add_action_listener do |e|
-      JOptionPane.show_message_dialog self, "Written by Jeff Pace (jeugenepace at gmail dot com)", "About", JOptionPane::OK_OPTION
+      appname = "Mackworth Psychological Vigilance Test"
+      author  = "Jeff Pace (jeugenepace&#64;gmail&#46;com)"
+      JOptionPane.show_message_dialog self, "<html>#{appname}<hr/>Written by #{author}</html>", "About", JOptionPane::OK_OPTION
+
     end
       
     help_menu.add item_about
