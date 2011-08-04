@@ -19,7 +19,6 @@ public class MackworthTestFrame extends RubyObject  {
             "require 'csv'\n" +
             "require 'set'\n" +
             "require 'pathname'\n" +
-            "require 'spacebar_listener'\n" +
             "\n" +
             "include Java\n" +
             "\n" +
@@ -27,6 +26,7 @@ public class MackworthTestFrame extends RubyObject  {
             "import java.awt.RenderingHints\n" +
             "import java.awt.Toolkit\n" +
             "import java.awt.event.KeyEvent\n" +
+            "import java.awt.event.KeyListener\n" +
             "import java.awt.geom.Ellipse2D\n" +
             "import javax.swing.JButton\n" +
             "import javax.swing.JFrame\n" +
@@ -49,6 +49,38 @@ public class MackworthTestFrame extends RubyObject  {
             "\n" +
             "  def mm_to_pixels length_in_mm\n" +
             "    length_in_mm * @@pixels_per_mm\n" +
+            "  end\n" +
+            "\n" +
+            "end\n" +
+            "\n" +
+            "class KeyList \n" +
+            "  include KeyListener\n" +
+            "\n" +
+            "  attr_reader :keytime\n" +
+            "\n" +
+            "  def initialize\n" +
+            "    @keytime = nil\n" +
+            "  end\n" +
+            "\n" +
+            "  def clear\n" +
+            "    @keytime = nil\n" +
+            "  end\n" +
+            "\n" +
+            "  def keyTyped e\n" +
+            "    # ignore all after the first input ...    \n" +
+            "    return if @keytime\n" +
+            "\n" +
+            "    keychar = e.get_key_char\n" +
+            "\n" +
+            "    if keychar == KeyEvent::VK_SPACE\n" +
+            "      @keytime = Time.new\n" +
+            "    end\n" +
+            "  end\n" +
+            "\n" +
+            "  def keyPressed e\n" +
+            "  end\n" +
+            "\n" +
+            "  def keyReleased e\n" +
             "  end\n" +
             "\n" +
             "end\n" +
