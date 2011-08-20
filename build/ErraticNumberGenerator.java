@@ -20,6 +20,12 @@ public class ErraticNumberGenerator extends RubyObject  {
             "require 'set'\n" +
             "require 'pathname'\n" +
             "\n" +
+            "require 'csvfile'\n" +
+            "require 'drawer'\n" +
+            "require 'panel'\n" +
+            "require 'spacebarlistener'\n" +
+            "require 'swingutil'\n" +
+            "\n" +
             "include Java\n" +
             "\n" +
             "import java.awt.Color\n" +
@@ -40,18 +46,6 @@ public class ErraticNumberGenerator extends RubyObject  {
             "\n" +
             "$testing = false\n" +
             "$param_num = $testing ? 1 : 0   # 0 == actual; 1 == testing\n" +
-            "\n" +
-            "module SwingUtil\n" +
-            "\n" +
-            "  def self.included base\n" +
-            "    @@pixels_per_mm = Toolkit.default_toolkit.screen_resolution.to_f / 25.4\n" +
-            "  end\n" +
-            "\n" +
-            "  def mm_to_pixels length_in_mm\n" +
-            "    length_in_mm * @@pixels_per_mm\n" +
-            "  end\n" +
-            "\n" +
-            "end\n" +
             "\n" +
             "\n" +
             "# returns erratic, but not completely random, numbers\n" +
@@ -84,38 +78,6 @@ public class ErraticNumberGenerator extends RubyObject  {
             "\n" +
             "end\n" +
             "\n" +
-            "\n" +
-            "class KeyList \n" +
-            "  include KeyListener\n" +
-            "\n" +
-            "  attr_reader :keytime\n" +
-            "\n" +
-            "  def initialize\n" +
-            "    @keytime = nil\n" +
-            "  end\n" +
-            "\n" +
-            "  def clear\n" +
-            "    @keytime = nil\n" +
-            "  end\n" +
-            "\n" +
-            "  def keyTyped e\n" +
-            "    # ignore all after the first input ...    \n" +
-            "    return if @keytime\n" +
-            "\n" +
-            "    keychar = e.get_key_char\n" +
-            "\n" +
-            "    if keychar == KeyEvent::VK_SPACE\n" +
-            "      @keytime = Time.new\n" +
-            "    end\n" +
-            "  end\n" +
-            "\n" +
-            "  def keyPressed e\n" +
-            "  end\n" +
-            "\n" +
-            "  def keyReleased e\n" +
-            "  end\n" +
-            "\n" +
-            "end\n" +
             "\n" +
             "\n" +
             "class MackworthTestResultsFile \n" +
@@ -174,7 +136,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  LINE_THICKNESS = 4\n" +
             "  DISTANCE_BETWEEN_LINES = 25\n" +
             "\n" +
-            "  LINE_COLOR = Color.new 50, 50, 50\n" +
+            "  FOREGROUND_COLOR = Color.new 50, 50, 50\n" +
             "\n" +
             "  INTRO_DURATION = 5000         # ms\n" +
             "\n" +
@@ -187,83 +149,19 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  BACKGROUND_COLOR = Color.new 250, 250, 250\n" +
             "\n" +
             "  BACKGROUND_COLOR_FLASH = Color.new 250, 0, 0\n" +
-            "\n" +
             "end\n" +
             "\n" +
             "\n" +
-            "class MainPanel < JPanel\n" +
-            "  include SwingUtil\n" +
+            "class MackworthLineDrawer < LineDrawer\n" +
+            "  include MackworthTestConstants\n" +
             "\n" +
-            "  attr_accessor :renderer, :background_color\n" +
-            "  \n" +
             "  def initialize\n" +
-            "    super()\n" +
-            "\n" +
-            "    @renderer = nil\n" +
-            "    @background_color = MackworthTestConstants::BACKGROUND_COLOR\n" +
+            "    super(FOREGROUND_COLOR, LINE_THICKNESS)\n" +
             "  end\n" +
-            "\n" +
-            "  def paintComponent g\n" +
-            "    super\n" +
-            "\n" +
-            "    g.background = @background_color\n" +
-            "\n" +
-            "    rh = RenderingHints.new RenderingHints::KEY_ANTIALIASING, RenderingHints::VALUE_ANTIALIAS_ON\n" +
-            "    \n" +
-            "    rh.put RenderingHints::KEY_RENDERING, RenderingHints::VALUE_RENDER_QUALITY\n" +
-            "    \n" +
-            "    g.rendering_hints = rh\n" +
-            "\n" +
-            "    dim = size\n" +
-            "\n" +
-            "    clear_screen g, dim\n" +
-            "\n" +
-            "    if @renderer\n" +
-            "      @renderer.render g, dim\n" +
-            "    end\n" +
-            "  end\n" +
-            "\n" +
-            "  def clear_screen g, dim\n" +
-            "    g.clear_rect 0, 0, dim.width, dim.height\n" +
-            "  end\n" +
-            "\n" +
             "end\n" +
             "\n" +
             "\n" +
-            "class LineDrawer\n" +
-            "  include SwingUtil\n" +
-            "\n" +
-            "  def draw_centered_line gdimary, y, length_in_mm\n" +
-            "    g   = gdimary[0]\n" +
-            "    dim = gdimary[1]\n" +
-            "  \n" +
-            "    g.color = MackworthTestConstants::LINE_COLOR\n" +
-            "    \n" +
-            "    len   = mm_to_pixels length_in_mm\n" +
-            "    ctr_x = dim.width  / 2\n" +
-            "    x     = ctr_x - len / 2\n" +
-            "\n" +
-            "    g.fill_rect x, y, len, MackworthTestConstants::LINE_THICKNESS\n" +
-            "  end\n" +
-            "\n" +
-            "  def draw_text g, dim, text\n" +
-            "    g.font = java.awt.Font.new \"Times New Roman\", java.awt.Font::PLAIN, 18\n" +
-            "\n" +
-            "    ctr_x = dim.width / 2\n" +
-            "    ctr_y = dim.height / 2\n" +
-            "\n" +
-            "    x = (ctr_x * 0.80).to_i\n" +
-            "    y = (ctr_y * 0.60).to_i\n" +
-            "    \n" +
-            "    text.each_with_index do |line, idx|\n" +
-            "      g.draw_string line, x, y + (idx * 30)\n" +
-            "    end\n" +
-            "  end\n" +
-            "\n" +
-            "end\n" +
-            "\n" +
-            "\n" +
-            "class LineRenderer < LineDrawer\n" +
+            "class LineRenderer < MackworthLineDrawer\n" +
             "  include MackworthTestConstants\n" +
             "\n" +
             "  attr_accessor :length_in_mm\n" +
@@ -272,6 +170,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    @test = test\n" +
             "    @dist_from_y = mm_to_pixels(DISTANCE_BETWEEN_LINES) / 2\n" +
             "    @eng = ErraticNumberGenerator.new(LINE_RANDOM_LENGTH, (LINE_RANDOM_LENGTH * 0.6).to_i)\n" +
+            "    super()\n" +
             "  end\n" +
             "\n" +
             "  def random_length base_len\n" +
@@ -281,7 +180,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  def render g, dim\n" +
             "    return unless @test.show_lines\n" +
             "\n" +
-            "    g.color = LINE_COLOR\n" +
+            "    g.color = FOREGROUND_COLOR\n" +
             "    \n" +
             "    length_in_mm = @test.current_line_length_in_mm\n" +
             "    ctr_y        = dim.height / 2\n" +
@@ -294,9 +193,19 @@ public class ErraticNumberGenerator extends RubyObject  {
             "end\n" +
             "\n" +
             "\n" +
-            "class IntroRenderer < LineDrawer\n" +
+            "class TextRenderer < MackworthLineDrawer\n" +
             "\n" +
-            "  def initialize test\n" +
+            "  def render g, dim\n" +
+            "    draw_text g, dim, text\n" +
+            "  end\n" +
+            "\n" +
+            "end\n" +
+            "\n" +
+            "\n" +
+            "class IntroRenderer < MackworthLineDrawer\n" +
+            "\n" +
+            "  def initialize\n" +
+            "    super()\n" +
             "    @text = Array.new\n" +
             "    \n" +
             "    @text << \"For each of the following screens,\"\n" +
@@ -318,17 +227,17 @@ public class ErraticNumberGenerator extends RubyObject  {
             "end\n" +
             "\n" +
             "\n" +
-            "class OutroRenderer < LineDrawer\n" +
+            "class OutroRenderer < MackworthLineDrawer\n" +
             "\n" +
-            "  def initialize test\n" +
+            "  attr_reader :text  \n" +
+            "\n" +
+            "  def initialize\n" +
             "    @text = Array.new\n" +
             "    \n" +
             "    @text << \"End of test.\"\n" +
             "    @text << \"\"\n" +
-            "  end\n" +
             "\n" +
-            "  def render g, dim\n" +
-            "    draw_text g, dim, @text\n" +
+            "    super()\n" +
             "  end\n" +
             "\n" +
             "end\n" +
@@ -345,7 +254,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "\n" +
             "    longiters = iterations * 0.25\n" +
             "\n" +
-            "    @key_timer = KeyList.new\n" +
+            "    @key_timer = SpacebarKeyListener.new\n" +
             "\n" +
             "    @mainpanel.add_key_listener @key_timer\n" +
             "\n" +
@@ -357,8 +266,6 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    while @longindices.size < longiters\n" +
             "      @longindices << rand(iterations)\n" +
             "    end\n" +
-            "\n" +
-            "    puts \"@longindices: #{@longindices.inspect}\"\n" +
             "\n" +
             "    @responses = Array.new\n" +
             "\n" +
@@ -379,25 +286,17 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    update_line_length is_long\n" +
             "    \n" +
             "    starttime = Time.now\n" +
-            "    # puts \"starting: #{starttime.to_f}\"\n" +
             "    @key_timer.clear\n" +
             "    \n" +
-            "    # puts \"num: #{num}\"\n" +
-            "\n" +
             "    @show_lines = true\n" +
             "\n" +
-            "    # $$$ looks like the JPanel intercepts the key event ...\n" +
-            "    \n" +
             "    MackworthTestConstants::FLICKER_ITERATIONS.times do\n" +
-            "      # puts \"flickering: #{Time.new.to_f}\"\n" +
             "      repaint\n" +
             "      java.lang.Thread.sleep(MackworthTestConstants::FLICKER_DURATION)\n" +
             "    end\n" +
             "\n" +
             "    @show_lines = false\n" +
             "    \n" +
-            "    # puts \"pausing: #{Time.new.to_f}\"\n" +
-            "\n" +
             "    repaint\n" +
             "\n" +
             "    endtime = Time.now\n" +
@@ -406,14 +305,9 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    \n" +
             "    sleep_duration = (MackworthTestConstants::DISPLAY_DURATION - duration).to_i\n" +
             "\n" +
-            "    # puts \"sleep_duration: #{sleep_duration}\"\n" +
-            "\n" +
             "    if sleep_duration > 0\n" +
             "      java.lang.Thread.sleep sleep_duration\n" +
-            "      # puts \"done sleeping\"\n" +
             "    end\n" +
-            "\n" +
-            "    # puts \"@key_timer: #{@key_timer}\"\n" +
             "\n" +
             "    # get it here, so subsequent calls don't let one \"leak\" in\n" +
             "    keytime = @key_timer.keytime\n" +
@@ -421,8 +315,6 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    answered = !keytime.nil?\n" +
             "\n" +
             "    response_time = answered ? keytime.to_f - starttime.to_f : -1.0\n" +
-            "\n" +
-            "    # puts \"response_time: #{response_time}\"\n" +
             "\n" +
             "    is_correct = answered == is_long\n" +
             "\n" +
@@ -440,11 +332,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "\n" +
             "    response = [ @user_id, response_time, answered, is_long, is_correct ]\n" +
             "\n" +
-            "    puts \"response: #{response.inspect}\"\n" +
-            "    \n" +
             "    @responses << response\n" +
-            "\n" +
-            "    # puts \"done: #{Time.new.to_f}\"\n" +
             "  end\n" +
             "\n" +
             "  def run_test\n" +
@@ -460,7 +348,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  end\n" +
             "\n" +
             "  def show_outro\n" +
-            "    @mainpanel.renderer = OutroRenderer.new self\n" +
+            "    @mainpanel.renderer = OutroRenderer.new\n" +
             "\n" +
             "    repaint\n" +
             "  end\n" +
@@ -468,8 +356,6 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  def run\n" +
             "    @user_id = Time.new.to_f\n" +
             "    \n" +
-            "    puts \"#{Time.new}: running\"\n" +
-            "\n" +
             "    run_test\n" +
             "\n" +
             "    show_outro\n" +
@@ -517,7 +403,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "  end\n" +
             "\n" +
             "  def run\n" +
-            "    @mainpanel.renderer = IntroRenderer.new self\n" +
+            "    @mainpanel.renderer = IntroRenderer.new\n" +
             "    @mainpanel.repaint\n" +
             "\n" +
             "    java.lang.Thread.sleep MackworthTestConstants::INTRO_DURATION\n" +
@@ -574,11 +460,8 @@ public class ErraticNumberGenerator extends RubyObject  {
             "\n" +
             "      ok = JOptionPane.show_confirm_dialog self, \"Are you sure you want to quit?\", \"Quit?\", JOptionPane::YES_NO_OPTION\n" +
             "      \n" +
-            "      puts \"ok? #{ok}\"\n" +
             "      if ok == 0\n" +
             "        java.lang.System.exit 0\n" +
-            "      else\n" +
-            "        puts \"not yet quitting!\"\n" +
             "      end\n" +
             "    end\n" +
             "    \n" +
@@ -599,7 +482,16 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    item_about.add_action_listener do |e|\n" +
             "      appname = \"Mackworth Psychological Vigilance Test\"\n" +
             "      author  = \"Jeff Pace (jeugenepace&#64;gmail&#46;com)\"\n" +
-            "      JOptionPane.show_message_dialog self, \"<html>#{appname}<hr/>Written by #{author}</html>\", \"About\", JOptionPane::OK_OPTION\n" +
+            "      website = \"http://www.incava.org\"\n" +
+            "      github  = \"https://github.com/jeugenepace\"\n" +
+            "      msg     = \"<html>\"\n" +
+            "      msg     << appname\n" +
+            "      msg     << \"<hr>\"\n" +
+            "      msg     << \"Written by #{author}\" << \"<br>\"\n" +
+            "      msg     << \"&nbsp;&nbsp;&nbsp #{website}\" << \"<br>\"\n" +
+            "      msg     << \"&nbsp;&nbsp;&nbsp #{github}\" << \"<br>\"\n" +
+            "      msg     << \"</html>\"\n" +
+            "      JOptionPane.show_message_dialog self, msg, \"About\", JOptionPane::OK_OPTION\n" +
             "    end\n" +
             "      \n" +
             "    help_menu.add item_about\n" +
@@ -617,7 +509,7 @@ public class ErraticNumberGenerator extends RubyObject  {
             "    set_location_relative_to nil\n" +
             "    get_content_pane.layout = java.awt.BorderLayout.new\n" +
             "\n" +
-            "    @panel = MainPanel.new\n" +
+            "    @panel = MainPanel.new(MackworthTestConstants::BACKGROUND_COLOR)\n" +
             "\n" +
             "    get_content_pane.add @panel, java.awt.BorderLayout::CENTER\n" +
             "\n" +
