@@ -16,7 +16,6 @@ public class MackworthTestMain extends RubyObject  {
         String source = new StringBuilder("#!/usr/bin/jruby -w\n" +
             "# -*- ruby -*-\n" +
             "\n" +
-            "require 'csv'\n" +
             "require 'set'\n" +
             "require 'pathname'\n" +
             "\n" +
@@ -25,6 +24,7 @@ public class MackworthTestMain extends RubyObject  {
             "require 'panel'\n" +
             "require 'spacebarlistener'\n" +
             "require 'swingutil'\n" +
+            "require 'testframe'\n" +
             "\n" +
             "include Java\n" +
             "\n" +
@@ -78,46 +78,6 @@ public class MackworthTestMain extends RubyObject  {
             "\n" +
             "end\n" +
             "\n" +
-            "\n" +
-            "\n" +
-            "class MackworthTestResultsFile \n" +
-            "\n" +
-            "  CSV_HEADER_FIELDS = [ \"userid\", \"duration\", \"answered\", \"is_long\", \"accurate\" ]\n" +
-            "\n" +
-            "  CSV_FILE_NAME = 'mackworth.csv'\n" +
-            "\n" +
-            "  def self.home_directory\n" +
-            "    home = ENV['HOME']\n" +
-            "    unless home\n" +
-            "      home = (ENV['HOMEDRIVE'] || \"\") + (ENV['HOMEPATH'] || \"\")\n" +
-            "    end\n" +
-            "    \n" +
-            "    homedir = ENV['HOME'] || (ENV['HOMEDRIVE'] + ENV['HOMEPATH'])\n" +
-            "    Pathname.new(homedir)\n" +
-            "  end\n" +
-            "\n" +
-            "  def initialize\n" +
-            "    @csv_file = self.class.home_directory + CSV_FILE_NAME\n" +
-            "    \n" +
-            "    @csv_lines = @csv_file.exist? ? CSV.read(@csv_file.to_s) : [ CSV_HEADER_FIELDS ]\n" +
-            "  end\n" +
-            "\n" +
-            "  def addlines lines\n" +
-            "    @csv_lines.concat lines\n" +
-            "  end\n" +
-            "\n" +
-            "  def write\n" +
-            "    @csv_lines.each do |line|\n" +
-            "      puts line\n" +
-            "    end\n" +
-            "\n" +
-            "    CSV.open @csv_file.to_s, 'w' do |csv|\n" +
-            "      @csv_lines.each do |line|\n" +
-            "        csv << line\n" +
-            "      end\n" +
-            "    end\n" +
-            "  end\n" +
-            "end\n" +
             "\n" +
             "module MackworthTestConstants\n" +
             "\n" +
@@ -227,7 +187,7 @@ public class MackworthTestMain extends RubyObject  {
             "end\n" +
             "\n" +
             "\n" +
-            "class OutroRenderer < MackworthLineDrawer\n" +
+            "class OutroRenderer < TextRenderer\n" +
             "\n" +
             "  attr_reader :text  \n" +
             "\n" +
@@ -369,11 +329,14 @@ public class MackworthTestMain extends RubyObject  {
             "    super(mainpanel, MackworthTestConstants::ITERATIONS_PER_TEST)\n" +
             "  end\n" +
             "\n" +
+            "  CSV_HEADER_FIELDS = [ \"userid\", \"duration\", \"answered\", \"is_long\", \"accurate\" ]\n" +
+            "\n" +
+            "  CSV_FILE_NAME = 'mackworth.csv'\n" +
+            "\n" +
             "  def write_responses\n" +
-            "    resfile = MackworthTestResultsFile.new\n" +
-            "\n" +
+            "    resfile = CSVFile.new CSV_FILE_NAME, CSV_HEADER_FIELDS\n" +
+            "    \n" +
             "    resfile.addlines @responses\n" +
-            "\n" +
             "    resfile.write\n" +
             "  end\n" +
             "\n" +
@@ -411,118 +374,38 @@ public class MackworthTestMain extends RubyObject  {
             "end\n" +
             "\n" +
             "\n" +
-            "class MackworthTestFrame < JFrame\n" +
+            "class MackworthTestFrame < TestFrame\n" +
             "\n" +
             "  def initialize\n" +
-            "    super MackworthTestConstants::APP_NAME\n" +
-            "\n" +
-            "    menubar = JMenuBar.new\n" +
-            "\n" +
-            "    test_menu = JMenu.new \"Test\"\n" +
-            "    test_menu.mnemonic = KeyEvent::VK_T\n" +
-            "\n" +
-            "    item_new = JMenuItem.new \"New\"\n" +
-            "    item_new.mnemonic = KeyEvent::VK_N\n" +
-            "    item_new.tool_tip_text = \"Run a new test\"\n" +
-            "    \n" +
-            "    item_new.add_action_listener do |e|\n" +
-            "      MackworthTest.new @panel\n" +
-            "      @panel.grab_focus\n" +
-            "    end\n" +
-            "\n" +
-            "    test_menu.add item_new\n" +
-            "\n" +
-            "    item_intro = JMenuItem.new \"Intro\"\n" +
-            "    item_intro.mnemonic = KeyEvent::VK_I\n" +
-            "    item_intro.tool_tip_text = \"Run the intro\"\n" +
-            "    \n" +
-            "    item_intro.add_action_listener do |e|\n" +
-            "      MackworthTestIntro.new(@panel)\n" +
-            "      @panel.grab_focus\n" +
-            "    end\n" +
-            "\n" +
-            "    test_menu.add item_intro\n" +
-            "\n" +
-            "    item_demo = JMenuItem.new \"Demo\"\n" +
-            "    item_demo.mnemonic = KeyEvent::VK_D\n" +
-            "    item_demo.tool_tip_text = \"Run the demo\"\n" +
-            "    \n" +
-            "    item_demo.add_action_listener do |e|\n" +
-            "      MackworthTestDemo.new(@panel)\n" +
-            "      @panel.grab_focus\n" +
-            "    end\n" +
-            "\n" +
-            "    test_menu.add item_demo\n" +
-            "\n" +
-            "    item_exit = JMenuItem.new \"Exit\"\n" +
-            "    item_exit.add_action_listener do |e|\n" +
-            "      dialog = javax.swing.JDialog.new\n" +
-            "\n" +
-            "      ok = JOptionPane.show_confirm_dialog self, \"Are you sure you want to quit?\", \"Quit?\", JOptionPane::YES_NO_OPTION\n" +
-            "      \n" +
-            "      if ok == 0\n" +
-            "        java.lang.System.exit 0\n" +
-            "      end\n" +
-            "    end\n" +
-            "    \n" +
-            "    item_exit.mnemonic = KeyEvent::VK_X\n" +
-            "    item_exit.tool_tip_text = \"Exit application\"\n" +
-            "\n" +
-            "    test_menu.add item_exit\n" +
-            "\n" +
-            "    menubar.add test_menu\n" +
-            "\n" +
-            "    help_menu = JMenu.new \"Help\"\n" +
-            "    help_menu.mnemonic = KeyEvent::VK_H\n" +
-            "\n" +
-            "    item_about = JMenuItem.new \"About\"\n" +
-            "    item_about.mnemonic = KeyEvent::VK_A\n" +
-            "    item_about.tool_tip_text = \"Show information about the program\"    \n" +
-            "\n" +
-            "    item_about.add_action_listener do |e|\n" +
-            "      appname = \"Mackworth Psychological Vigilance Test\"\n" +
-            "      author  = \"Jeff Pace (jeugenepace&#64;gmail&#46;com)\"\n" +
-            "      website = \"http://www.incava.org\"\n" +
-            "      github  = \"https://github.com/jeugenepace\"\n" +
-            "      msg     = \"<html>\"\n" +
-            "      msg     << appname\n" +
-            "      msg     << \"<hr>\"\n" +
-            "      msg     << \"Written by #{author}\" << \"<br>\"\n" +
-            "      msg     << \"&nbsp;&nbsp;&nbsp #{website}\" << \"<br>\"\n" +
-            "      msg     << \"&nbsp;&nbsp;&nbsp #{github}\" << \"<br>\"\n" +
-            "      msg     << \"</html>\"\n" +
-            "      JOptionPane.show_message_dialog self, msg, \"About\", JOptionPane::OK_OPTION\n" +
-            "    end\n" +
-            "      \n" +
-            "    help_menu.add item_about\n" +
-            "\n" +
-            "    menubar.add help_menu\n" +
-            "\n" +
-            "    set_jmenu_bar menubar  \n" +
-            "\n" +
-            "    # this works fine on Linux with Java 1.6, but not Windows with any version,\n" +
-            "    # or Linux with Java 1.5:\n" +
-            "    # set_extended_state JFrame::MAXIMIZED_BOTH\n" +
-            "    # set_undecorated true\n" +
-            "    \n" +
-            "    set_default_close_operation JFrame::EXIT_ON_CLOSE\n" +
-            "    set_location_relative_to nil\n" +
-            "    get_content_pane.layout = java.awt.BorderLayout.new\n" +
-            "\n" +
-            "    @panel = MainPanel.new(MackworthTestConstants::BACKGROUND_COLOR)\n" +
-            "\n" +
-            "    get_content_pane.add @panel, java.awt.BorderLayout::CENTER\n" +
-            "\n" +
-            "    @panel.layout = nil\n" +
-            "\n" +
-            "    @panel.request_focus_in_window\n" +
-            "\n" +
-            "    pack\n" +
-            "    set_visible true\n" +
-            "\n" +
-            "    move(0, 0)\n" +
-            "    resize Toolkit.default_toolkit.screen_size\n" +
+            "    super(MackworthTestConstants::APP_NAME)\n" +
             "  end\n" +
+            "\n" +
+            "  def run_test\n" +
+            "    MackworthTest.new @panel\n" +
+            "  end\n" +
+            "\n" +
+            "  def run_intro\n" +
+            "    MackworthTestIntro.new @panel\n" +
+            "  end\n" +
+            "\n" +
+            "  def run_demo\n" +
+            "    MackworthTestDemo.new @panel\n" +
+            "  end\n" +
+            "\n" +
+            "  def get_about_text\n" +
+            "    appname = \"Mackworth Psychological Vigilance Test\"\n" +
+            "    author  = \"Jeff Pace (jeugenepace&#64;gmail&#46;com)\"\n" +
+            "    website = \"http://www.incava.org\"\n" +
+            "    github  = \"https://github.com/jeugenepace\"\n" +
+            "    text    = \"<html>\"\n" +
+            "    text    << appname\n" +
+            "    text    << \"<hr>\"\n" +
+            "    text    << \"Written by #{author}\" << \"<br>\"\n" +
+            "    text    << \"&nbsp;&nbsp;&nbsp #{website}\" << \"<br>\"\n" +
+            "    text    << \"&nbsp;&nbsp;&nbsp #{github}\" << \"<br>\"\n" +
+            "    text    << \"</html>\"\n" +
+            "  end\n" +
+            "  \n" +
             "end\n" +
             "\n" +
             "class MackworthTestMain\n" +
