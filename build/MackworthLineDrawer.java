@@ -377,7 +377,7 @@ public class MackworthLineDrawer extends RubyObject  {
             "class MackworthTestFrame < TestFrame\n" +
             "\n" +
             "  def initialize\n" +
-            "    super(MackworthTestConstants::APP_NAME)\n" +
+            "    super MackworthTestConstants::APP_NAME, MackworthTestConstants::BACKGROUND_COLOR\n" +
             "  end\n" +
             "\n" +
             "  def run_test\n" +
