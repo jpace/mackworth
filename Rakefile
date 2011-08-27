@@ -20,6 +20,7 @@ $rbfiles = %w{
   panel.rb
   spacebarlistener.rb
   swingutil.rb
+  testframe.rb
 }
 
 def buildfile fname
