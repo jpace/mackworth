@@ -362,7 +362,7 @@ end
 class MackworthTestFrame < TestFrame
 
   def initialize
-    super(MackworthTestConstants::APP_NAME)
+    super MackworthTestConstants::APP_NAME, MackworthTestConstants::BACKGROUND_COLOR
   end
 
   def run_test
