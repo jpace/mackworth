@@ -28,7 +28,7 @@ import javax.swing.JPanel
 
 class TestFrame < JFrame
 
-  def initialize appname, background_color
+  def initialize(appname, background_color)
     super appname
 
     menubar = JMenuBar.new

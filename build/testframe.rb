@@ -28,7 +28,7 @@ import javax.swing.JPanel
 
 class TestFrame < JFrame
 
-  def initialize appname
+  def initialize(appname, background_color)
     super appname
 
     menubar = JMenuBar.new
@@ -42,7 +42,6 @@ class TestFrame < JFrame
     
     item_new.add_action_listener do |e|
       run_test
-      #$$$ MackworthTest.new @panel
       @panel.grab_focus
     end
 
@@ -54,7 +53,6 @@ class TestFrame < JFrame
     
     item_intro.add_action_listener do |e|
       run_intro
-      #$$ MackworthTestIntro.new(@panel)
       @panel.grab_focus
     end
 
@@ -66,7 +64,6 @@ class TestFrame < JFrame
     
     item_demo.add_action_listener do |e|
       run_demo
-      #$$$ MackworthTestDemo.new(@panel)
       @panel.grab_focus
     end
 
@@ -117,7 +114,7 @@ class TestFrame < JFrame
     set_location_relative_to nil
     get_content_pane.layout = java.awt.BorderLayout.new
 
-    @panel = MainPanel.new(MackworthTestConstants::BACKGROUND_COLOR)
+    @panel = MainPanel.new background_color
 
     get_content_pane.add @panel, java.awt.BorderLayout::CENTER
 
